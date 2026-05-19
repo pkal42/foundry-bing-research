@@ -1,0 +1,13 @@
+# Runtime dependencies for the Foundry + Bing-Grounding notebooks.
+# Pinned only where required by an API-shape constraint; otherwise floating.
+
+agent-framework-foundry
+azure-ai-projects>=2.0
+azure-ai-evaluation
+azure-ai-contentsafety
+azure-identity
+httpx
+python-dotenv
+
+# Notebook tooling
+ipykernel
