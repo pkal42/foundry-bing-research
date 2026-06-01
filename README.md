@@ -104,9 +104,9 @@ The notebooks pick a credential in this order:
    `AZURE_CLIENT_ID`, and `AZURE_CLIENT_SECRET` are all set in the environment.
    This is the recommended path for unattended hosts (on-prem Linux servers,
    container workloads with no Managed Identity, etc.). The principal needs
-   `Azure AI User` on the Foundry project and `Cognitive Services User` on the
-   Content Safety endpoint (only if Layers 1/3 of the guardrail pipeline are
-   enabled). For provisioning, also grant `Contributor` on the resource group.
+   appropriate RBAC on the Foundry account/project (and on the Content Safety
+   endpoint if Layers 1/3 of the guardrail pipeline are enabled). See
+   [Service principal setup](#service-principal-setup) for a concrete role assignment flow.
 2. **`DefaultAzureCredential` / `AzureCliCredential` fallback** — if the SP
    env vars above are not set, sync paths use `DefaultAzureCredential` and
    async paths use `AzureCliCredential`. This covers local dev with `az login`.
