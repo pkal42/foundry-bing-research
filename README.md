@@ -23,7 +23,7 @@ All notebooks target the **GA** stack:
 
 - `agent-framework-foundry` (Microsoft Agent Framework + Foundry connectors)
 - `azure-ai-projects >= 2.0` (PromptAgent, `BingGroundingTool`)
-- `azure-identity` (`AzureCliCredential` / `DefaultAzureCredential`)
+- `azure-identity` (`ClientSecretCredential` / `DefaultAzureCredential` / `AzureCliCredential`)
 - `azure-ai-evaluation` (`GroundednessEvaluator`, `evaluate`)
 - Foundry control-plane API `2025-06-01`
 - Model deployment `gpt-5.1` (model version `2025-11-13`)
@@ -94,6 +94,82 @@ CONTENT_SAFETY_ENDPOINT=https://<your-foundry-acct>.cognitiveservices.azure.com/
 # Judge-model deployment for the batch evaluation harness. Leave empty to skip
 # groundedness scoring. See README "Batch evaluation" section for why.
 EVAL_JUDGE_DEPLOYMENT_NAME=gpt-4o-mini
+```
+
+### Authentication
+
+The notebooks pick a credential in this order:
+
+1. **Service principal + client secret** — if `AZURE_TENANT_ID`,
+   `AZURE_CLIENT_ID`, and `AZURE_CLIENT_SECRET` are all set in the environment.
+   This is the recommended path for unattended hosts (on-prem Linux servers,
+   container workloads with no Managed Identity, etc.). The principal needs
+   `Azure AI User` on the Foundry project and `Cognitive Services User` on the
+   Content Safety endpoint (only if Layers 1/3 of the guardrail pipeline are
+   enabled). For provisioning, also grant `Contributor` on the resource group.
+2. **`DefaultAzureCredential` / `AzureCliCredential` fallback** — if the SP
+   env vars above are not set, sync paths use `DefaultAzureCredential` and
+   async paths use `AzureCliCredential`. This covers local dev with `az login`.
+
+No code change is needed to switch modes; only the environment differs.
+
+#### Service principal setup
+
+Use this flow when you want to run the notebooks unattended or from a CI job.
+
+1. Create the service principal:
+
+```powershell
+az ad sp create-for-rbac `
+  --name "tp-bulk-research-sp" `
+  --role Contributor `
+  --scopes "/subscriptions/<subscription-id>/resourceGroups/<resource-group>"
+```
+
+2. Grant the SP access to the Foundry project and account:
+
+```powershell
+$spObjectId = "<object-id-from-create-for-rbac>"
+$sub = "<subscription-id>"
+$rg = "<resource-group>"
+$account = "<foundry-account-name>"
+$project = "<foundry-project-name>"
+
+$projectScope = "/subscriptions/$sub/resourceGroups/$rg/providers/Microsoft.CognitiveServices/accounts/$account/projects/$project"
+$accountScope = "/subscriptions/$sub/resourceGroups/$rg/providers/Microsoft.CognitiveServices/accounts/$account"
+
+az role assignment create `
+  --assignee-object-id $spObjectId `
+  --assignee-principal-type ServicePrincipal `
+  --role "Azure AI Developer" `
+  --scope $accountScope
+
+az role assignment create `
+  --assignee-object-id $spObjectId `
+  --assignee-principal-type ServicePrincipal `
+  --role "Azure AI Administrator" `
+  --scope $accountScope
+
+az role assignment create `
+  --assignee-object-id $spObjectId `
+  --assignee-principal-type ServicePrincipal `
+  --role "Contributor" `
+  --scope $projectScope
+```
+
+3. Export the environment variables before running the notebook:
+
+```powershell
+$env:AZURE_TENANT_ID="<tenant-id>"
+$env:AZURE_CLIENT_ID="<app-id>"
+$env:AZURE_CLIENT_SECRET="<client-secret>"
+```
+
+4. Execute the notebook:
+
+```powershell
+cd C:\Source\bing-research
+.\.venv\Scripts\python.exe -m jupyter nbconvert --to notebook --execute transfer-pricing-bulk-research.ipynb --output transfer-pricing-bulk-research.executed.ipynb --ExecutePreprocessor.timeout=1800
 ```
 
 ## Provisioning
