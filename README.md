@@ -129,7 +129,7 @@ az ad sp create-for-rbac `
 2. Grant the SP access to the Foundry project and account:
 
 ```powershell
-$spObjectId = "<object-id-from-create-for-rbac>"
+$spObjectId = (az ad sp show --id "<app-id-from-create-for-rbac>" --query id -o tsv)
 $sub = "<subscription-id>"
 $rg = "<resource-group>"
 $account = "<foundry-account-name>"
